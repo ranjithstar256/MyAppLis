@@ -3,8 +3,8 @@ package com.am.myappl;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.DialogInterface;
@@ -27,11 +27,19 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
-public class MainActivity extends AppCompatActivity {
+
+    public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+    private GoogleMap mMap;
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationRequest mLocationRequest;
@@ -42,7 +50,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_maps);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         fetchLastLocation();
         mlocationCallback = new LocationCallback() {
@@ -55,7 +67,11 @@ public class MainActivity extends AppCompatActivity {
                     // Update UI with location data
                     // ...
                     Log.e("CONTINIOUSLOC: ", location.toString());
-                    ((TextView)findViewById(R.id.textv)).setText(location.getLatitude()+"\n"+location.getLongitude());
+                    LatLng sydney = new LatLng(location.getLatitude(), location.getLongitude());
+                    mMap.clear();
+                mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+///                    ((TextView)findViewById(R.id.textv)).setText(location.getLatitude()+"\n"+location.getLongitude());
                 }
             };
         };
@@ -65,6 +81,17 @@ public class MainActivity extends AppCompatActivity {
                 .addLocationRequest(mLocationRequest);
         checkLocationSetting(builder);
     }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+        // Add a marker in Sydney and move the camera
+        LatLng sydney = new LatLng(-34, 151);
+        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+    }
+
     private void fetchLastLocation() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -89,14 +116,14 @@ public class MainActivity extends AppCompatActivity {
                         if (location != null) {
                             // Logic to handle location object
                             Log.i("LAST LOCATION: ", location.toString()); // You will get your last location here
-                            Toast.makeText(MainActivity.this, "success", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MapsActivity.this, "success", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
-        fusedLocationClient.getLastLocation().addOnFailureListener(MainActivity.this, new OnFailureListener() {
+        fusedLocationClient.getLastLocation().addOnFailureListener(MapsActivity.this, new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
-                Toast.makeText(MainActivity.this, "success in progress", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MapsActivity.this, "success in progress", Toast.LENGTH_SHORT).show();
 
             }
         });
@@ -123,9 +150,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showPermissionAlert(){
-        if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, 123);
+        if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MapsActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, 123);
         }
     }
 
@@ -159,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
             public void onFailure(@NonNull final Exception e) {
                 if (e instanceof ResolvableApiException) {
                     // Location settings are not satisfied, but this can be fixed
-                    AlertDialog.Builder builder1 = new AlertDialog.Builder(MainActivity.this);
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(MapsActivity.this);
                     builder1.setTitle("Continious Location Request");
                     builder1.setMessage("This request is essential to get location update continiously");
                     builder1.create();
@@ -168,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onClick(DialogInterface dialog, int which) {
                             ResolvableApiException resolvable = (ResolvableApiException) e;
                             try {
-                                resolvable.startResolutionForResult(MainActivity.this,
+                                resolvable.startResolutionForResult(MapsActivity.this,
                                         REQUEST_CHECK_SETTINGS);
                             } catch (IntentSender.SendIntentException e1) {
                                 e1.printStackTrace();
@@ -178,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
                     builder1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            Toast.makeText(MainActivity.this, "Location update permission not granted", Toast.LENGTH_LONG).show();
+                            Toast.makeText(MapsActivity.this, "Location update permission not granted", Toast.LENGTH_LONG).show();
                         }
                     });
                     builder1.show();
@@ -218,11 +245,5 @@ public class MainActivity extends AppCompatActivity {
         fusedLocationClient.requestLocationUpdates(mLocationRequest,
                 mlocationCallback,
                 null /* Looper */);
-    }
-
-
-
-    private void stopLocationUpdates() {
-        fusedLocationClient.removeLocationUpdates(mlocationCallback);
     }
 }
